@@ -111,7 +111,7 @@ class WebDriver(object):
 
     def __init__(self, command_executor='http://127.0.0.1:4444/wd/hub',
                  desired_capabilities=None, browser_profile=None, proxy=None,
-                 keep_alive=False, file_detector=None):
+                 keep_alive=False, file_detector=None, session_id=None):
         """
         Create a new driver that will issue commands using the wire protocol.
 
@@ -128,6 +128,8 @@ class WebDriver(object):
              HTTP keep-alive. Defaults to False.
          - file_detector - Pass custom file detector object during instantiation. If None,
              then default LocalFileDetector() will be used.
+         - session_id - Pass a custom session ID to attempt to reconnect to an existing remote
+             session.
         """
         if desired_capabilities is None:
             raise WebDriverException("Desired Capabilities can't be None")
@@ -141,14 +143,16 @@ class WebDriver(object):
         if type(self.command_executor) is bytes or isinstance(self.command_executor, str):
             self.command_executor = RemoteConnection(command_executor, keep_alive=keep_alive)
         self._is_remote = True
-        self.session_id = None
         self.capabilities = {}
         self.error_handler = ErrorHandler()
         self.start_client()
         if browser_profile is not None:
             warnings.warn("Please use FirefoxOptions to set browser profile",
                           DeprecationWarning)
-        self.start_session(desired_capabilities, browser_profile)
+        if session_id is None:
+            self.start_session(desired_capabilities, browser_profile)
+        else
+            self.resume_session(session_id)
         self._switch_to = SwitchTo(self)
         self._mobile = Mobile(self)
         self.file_detector = file_detector or LocalFileDetector()
@@ -249,6 +253,21 @@ class WebDriver(object):
             self.capabilities = response.get('capabilities')
 
         # Double check to see if we have a W3C Compliant browser
+        self.w3c = response.get('status') is None
+
+    def resume_session(self, session_id):
+        """
+        Resumes an existing session first by fetching the existing session
+        capabilities and then assigning the session ID to the current session.
+
+        :Args:
+         - session_id - The session ID to resume.
+        """
+        response = self.execute(Command.GET_SESSION_CAPABILITIES)
+        self.capabilities = response.get('value')
+        self.session_id = session_id
+
+        # Check to see if we have a W3C Compliant browser
         self.w3c = response.get('status') is None
 
     def _wrap_value(self, value):

@@ -33,6 +33,7 @@ class Command(object):
     STATUS = "status"
     NEW_SESSION = "newSession"
     GET_ALL_SESSIONS = "getAllSessions"
+    GET_SESSION_CAPABILITIES = "getSessionCapabilities"
     DELETE_SESSION = "deleteSession"
     CLOSE = "close"
     QUIT = "quit"
